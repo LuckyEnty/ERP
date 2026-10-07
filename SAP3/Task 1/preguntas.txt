@@ -1,0 +1,8 @@
+Check if the system is set up for perpetual inventory and whether this setting can be changed? 
+  The company uses a Perpetual Inventory System. The setting cannot currently be changed because it is locked.
+
+What is the default valuation method set for the company? 
+  The default inventory valuation method for the company is Moving Average.
+
+Are item costs managed at the warehouse level? 
+  Item costs are managed at the warehouse level because the "Manage Item Cost per Warehouse" option is enabled.
