@@ -1,0 +1,5 @@
+ How can you check that the majority of the delivery will be from the northern warehouse?
+   Abriendo Sales Order y revisando Available Inventory. 
+
+How can you ensure the customer receives the quantities they need?
+  Puedes alojar inventario desde diferentes warehouse durante el envio
