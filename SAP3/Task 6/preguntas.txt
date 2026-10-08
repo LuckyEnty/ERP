@@ -1,0 +1,2 @@
+How are the processor items managed in purchasing, inventory, and sales?
+  The processor items are purchased through Goods Receipt POs from vendor V1010, stored in inventory using their assigned valuation method (Standard Cost or FIFO), and sold through Sales Orders and Delivery documents. SAP Business One automatically updates inventory quantities, inventory values, and accounting records during each transaction.
