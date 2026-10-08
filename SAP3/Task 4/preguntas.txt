@@ -1,0 +1,2 @@
+Can you use the same item number or do you need to create a separate item?  
+  No. The same item number cannot be used if it is already configured with a different valuation method. Since valuation methods cannot be changed after inventory transactions exist, a separate item must be created and configured with FIFO valuation.
