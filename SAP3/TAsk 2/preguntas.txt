@@ -1,0 +1,2 @@
+How does the cost display in the accounting posting for the goods receipt PO? 
+  The inventory posting uses the item's Standard Cost rather than the vendor purchase price. Although the second shipment was purchased at 200 per unit, the inventory account was posted using the standard cost of 100 per unit.
