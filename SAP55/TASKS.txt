@@ -1,0 +1,36 @@
+TASK 1 
+OC WoodTrend manufacture wood furniture. They decided to start manufacturing kitchen chairs. 
+in order to start a production process, a bill of materials for the chair should be defined as follows: 
+Produced Item code: C00016. Description: White Chair 
+Stage 1 - Assembly 
+Item: 
+W00002 
+Wooden Bar 
+Qty = 16  
+Resource: 
+RC0002 
+Carpenter  
+0.5 hours  
+Stage 2 - Paint 
+Item: 
+P000011 
+White Paint (Liter) 
+Qty =1 
+Resource: 
++ 1 waiting days 
+RC0002 
+Carpenter  
+1 hours  
+Stage 3 - Padding 
+Item: 
+P00022 
+Seat Padding 
+Qty =1  
+Resource: 
+RC0002 
+Carpenter  
+0.5 hours  
+Create all 3 component items and another one for the produced item. Set issue method = Manual. 
+Create an employee resource for a carpenter with 1 hour as the time per resource unit. Set issue 
+method = Manual. 
+Create a suitable bill of materials.
