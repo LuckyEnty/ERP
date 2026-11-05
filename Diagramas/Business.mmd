@@ -1,45 +1,38 @@
-flowchart TD
-    %% Inicio del proceso
-    Start((Inicio)) --> RF01[RF-01: Registro de Clave, UoM Base y Datos Básicos]
+flowchart LR
+    %% Subgraphs por etapa lógica
+    subgraph Captura["1. Captura & Validación Básica"]
+        Start((Inicio)) --> RF01["RF-01: Registro Clave, UoM Base & Datos Básicos"]
+        RF01 --> CheckID{"UT-03: ¿Clave válida?"}
+        CheckID -- No --> RejectID["Rechazar: Formato inválido"] --> ErrEnd1((Fin Error))
+        CheckID -- Sí --> CheckWeight{"UT-01: ¿Bruto >= Neto?"}
+        CheckWeight -- No --> RejectWeight["Rechazar: Peso inválido"] --> ErrEnd2((Fin Error))
+    end
 
-    %% Regla de Integridad de Formato
-    RF01 --> CheckID{UT-03: ¿Formato de clave válido?}
-    CheckID -- No --> RejectID[Rechazar: Caracteres especiales o espacios] --> ErrorEnd((Fin con Error))
-    CheckID -- Sí --> CheckWeight{UT-01: ¿Peso Bruto >= Peso Neto?}
-    
-    %% Regla de Integridad de Pesos
-    CheckWeight -- No --> RejectWeight[Rechazar: Peso Neto excede Peso Bruto] --> ErrorEnd
-    CheckWeight -- Sí --> Sourcing{¿Tipo de Aprovisionamiento?}
+    subgraph Logistica["2. Planificación & Logística"]
+        CheckWeight -- Sí --> Sourcing{"Aprovisionamiento"}
+        Sourcing -- "Externo (F)" --> RF02_Ext["RF-02/RN-06: Grupo Compras & Plazo"]
+        Sourcing -- "Interno/Prod" --> RF02_Mfg["RF-02/RN-01: Tipo MRP & Lote"]
+        RF02_Ext --> RF03["RF-03/RN-02: Extensión Centro & Almacén"]
+        RF02_Mfg --> RF03
+    end
 
-    %% Bifurcación Aprovisionamiento / Manufactura
-    Sourcing -- Externo F --> RF02_Ext[RF-02 / RN-06: Asignar Grupo de Compras y Plazo de Entrega]
-    Sourcing -- Interno / Manufactura --> RF02_Mfg[RF-02 / RN-01: Asignar Tipo MRP, Parámetros y Tamaño de Lote]
+    subgraph Finanzas["3. Comercial & Valoración"]
+        RF03 --> Commercial{"¿Comercial?"}
+        Commercial -- Sí --> RF04["RF-04/RN-03: Impuestos, Carga/Transporte"]
+        Commercial -- No --> RF05["RF-05: Cat. Valoración & Control S/V"]
+        RF04 --> RF05
+        RF05 --> CheckPrice{"UT-05: ¿Precio > 0 en S?"}
+        CheckPrice -- No --> RejectPrice["Rechazar: Precio inválido"] --> ErrEnd3((Fin Error))
+        CheckPrice -- Sí --> CheckFK{"¿FKs en tablas maestras?"}
+        CheckFK -- No --> Rollback["Rollback: Fallo Integridad"] --> ErrEnd4((Fin Error))
+    end
 
-    %% Extensión Logística y Almacén
-    RF02_Ext --> RF03[RF-03 / RN-02: Extensión Logística a Centro y Almacén]
-    RF02_Mfg --> RF03
-
-    %% Validación Comercial
-    RF03 --> Commercial{¿Artículo Comercializable?}
-    Commercial -- Sí --> RF04[RF-04 / RN-03: Asignar Clasificación Fiscal y Grupos de Carga/Transporte]
-    Commercial -- No --> RF05[RF-05: Asignar Categoría de Valoración y Control de Precio S/V]
-    RF04 --> RF05
-
-    %% Validación Financiera y Control de Precios
-    RF05 --> CheckPrice{UT-05: ¿Precio Base > 0 en Control S?}
-    CheckPrice -- No --> RejectPrice[Rechazar: Precio base inválido] --> ErrorEnd
-    CheckPrice -- Sí --> CheckFK{¿Claves foráneas válidas en tablas maestras?}
-
-    %% Integridad Referencial y Persistencia Atómica
-    CheckFK -- No --> Rollback[Abortar: Fallo de Integridad Referencial] --> ErrorEnd
-    CheckFK -- Sí --> Commit[Alta Atómica del Registro Maestro e Historial de Cambios]
-
-    %% Ciclo Operativo / Validaciones Transaccionales
-    Commit --> StatusCheck{RN-04 / RF-06: ¿Estatus Operativo Activo?}
-    StatusCheck -- Bloqueado --> BlockOps[Bloquear Órdenes de Compra / Ventas] --> End((Fin))
-    StatusCheck -- Activo --> EnableOps[Habilitar Transacciones Operativas]
-
-    %% Verificación de Inmutabilidad de UoM
-    EnableOps --> StockMov[Entrada de Mercancías / Registro de Stock Inicial]
-    StockMov --> LockUoM[RN-05: Bloqueo Inmutable de UoM Base contra Modificaciones]
-    LockUoM --> End
+    subgraph Operaciones["4. Persistencia & Ciclo Operativo"]
+        CheckFK -- Sí --> Commit["Alta Atómica & Log de Auditoría"]
+        Commit --> StatusCheck{"RN-04/RF-06: ¿Activo?"}
+        StatusCheck -- Bloqueado --> BlockOps["Bloquear Compras/Ventas"] --> End1((Fin))
+        StatusCheck -- Activo --> EnableOps["Habilitar Operaciones"]
+        EnableOps --> StockMov["Entrada de Mercancías"]
+        StockMov --> LockUoM["RN-05/FT-05: Bloqueo Inmutable UoM"]
+        LockUoM --> End2((Fin))
+    end
