@@ -1,38 +1,65 @@
 flowchart LR
-    %% Subgraphs por etapa lógica
-    subgraph Captura["1. Captura & Validación Básica"]
-        Start((Inicio)) --> RF01["RF-01: Registro Clave, UoM Base & Datos Básicos"]
-        RF01 --> CheckID{"UT-03: ¿Clave válida?"}
-        CheckID -- No --> RejectID["Rechazar: Formato inválido"] --> ErrEnd1((Fin Error))
-        CheckID -- Sí --> CheckWeight{"UT-01: ¿Bruto >= Neto?"}
-        CheckWeight -- No --> RejectWeight["Rechazar: Peso inválido"] --> ErrEnd2((Fin Error))
+    %% Subgraph 1: Interacción del Usuario (Banda inferior)
+    subgraph Usuario["Interacción del Usuario"]
+        direction LR
+        Start(["Inicio: Crear / Actualizar Artículo"]) --> IngresoDatos["RF-01: Ingresar Datos Críticos<br>(Clave, UoM Base, Categoría, Pesos)"]
+        ConfigLogistica["RF-02 / RF-03 / RF-04:<br>Configurar MRP, Centros, Almacenes,<br>Impuestos y Valoración S/V"]
     end
 
-    subgraph Logistica["2. Planificación & Logística"]
-        CheckWeight -- Sí --> Sourcing{"Aprovisionamiento"}
-        Sourcing -- "Externo (F)" --> RF02_Ext["RF-02/RN-06: Grupo Compras & Plazo"]
-        Sourcing -- "Interno/Prod" --> RF02_Mfg["RF-02/RN-01: Tipo MRP & Lote"]
-        RF02_Ext --> RF03["RF-03/RN-02: Extensión Centro & Almacén"]
-        RF02_Mfg --> RF03
+    %% Subgraph 2: Capa de Lógica y Reglas de Negocio (Banda superior/central con decisiones diagonales)
+    subgraph LogicaNegocio["Capa de Lógica y Reglas de Negocio"]
+        direction TB
+        ValFormato{"UT-03:<br>¿Formato de Clave Válido?<br>(Sin caracteres raros)"}
+        ValPesos{"UT-01:<br>¿Precisión de Pesos OK?<br>(Peso Bruto >= Neto)"}
+        ValIntegridad{"Integridad Referencial:<br>¿Centro, Almacén, Grupo Art.<br>y Cat. Valoración Existen?"}
+        ValCampos{"RF-02 / RN-01 / RN-06:<br>¿Campos Mandatorios Completos?<br>(MRP/Lote o Compras)"}
+        ValPrecios{"UT-05:<br>¿Precio Base > 0<br>en Control Estándar S?"}
+        ValMutacion{"RN-05 / FT-05:<br>¿Intento de Modificar UoM Base<br>con Stock o Movimientos > 0?"}
     end
 
-    subgraph Finanzas["3. Comercial & Valoración"]
-        RF03 --> Commercial{"¿Comercial?"}
-        Commercial -- Sí --> RF04["RF-04/RN-03: Impuestos, Carga/Transporte"]
-        Commercial -- No --> RF05["RF-05: Cat. Valoración & Control S/V"]
-        RF04 --> RF05
-        RF05 --> CheckPrice{"UT-05: ¿Precio > 0 en S?"}
-        CheckPrice -- No --> RejectPrice["Rechazar: Precio inválido"] --> ErrEnd3((Fin Error))
-        CheckPrice -- Sí --> CheckFK{"¿FKs en tablas maestras?"}
-        CheckFK -- No --> Rollback["Rollback: Fallo Integridad"] --> ErrEnd4((Fin Error))
+    %% Subgraph 3: Base de Datos ERP (Banda derecha de errores y persistencia)
+    subgraph BaseDatos["Base de Datos ERP"]
+        direction TB
+        ErrFormato(["Error: Formato de Clave Inválido / Caracteres Especiales"]):::errStyle
+        ErrPesos(["Error: Incoherencia Numérica (Peso Neto > Bruto)"]):::errStyle
+        ErrFK(["Error: Entidad Referenciada Inexistente (Fallo FK)"]):::errStyle
+        ErrCampos(["Error: Falta Información Obligatoria de Aprovisionamiento"]):::errStyle
+        ErrPrecio(["Error: Precio Base Inválido o Nulo en Control S"]):::errStyle
+        ErrMutacion(["Error: Bloqueo de Mutación Estructural por Existencias"]):::errStyle
+        
+        Persistir["Guardar Registro Maestro<br>(Commit Atómico)"]:::dbStyle
+        AuditLog["Auditabilidad (Change Log):<br>Generar Log Inmutable de Auditoría"]:::dbStyle
+        FinExito(["Fin: Artículo Activo<br>y Disponible en el Sistema"]):::successStyle
     end
 
-    subgraph Operaciones["4. Persistencia & Ciclo Operativo"]
-        CheckFK -- Sí --> Commit["Alta Atómica & Log de Auditoría"]
-        Commit --> StatusCheck{"RN-04/RF-06: ¿Activo?"}
-        StatusCheck -- Bloqueado --> BlockOps["Bloquear Compras/Ventas"] --> End1((Fin))
-        StatusCheck -- Activo --> EnableOps["Habilitar Operaciones"]
-        EnableOps --> StockMov["Entrada de Mercancías"]
-        StockMov --> LockUoM["RN-05/FT-05: Bloqueo Inmutable UoM"]
-        LockUoM --> End2((Fin))
-    end
+    %% Conexiones e hilo conductor (recreando la cascada diagonal de la imagen)
+    IngresoDatos --> ValFormato
+    
+    ValFormato -- No --> ErrFormato
+    ValFormato -- Sí --> ValPesos
+    
+    ValPesos -- No --> ErrPesos
+    ValPesos -- Sí --> ValIntegridad
+    
+    ValIntegridad -- No --> ErrFK
+    ValIntegridad -- Sí --> ValCampos
+    
+    ValCampos -- No --> ErrCampos
+    ValCampos -- Sí --> ConfigLogistica
+    
+    %% Retorno a la lógica tras la configuración del usuario
+    ConfigLogistica --> ValPrecios
+    
+    ValPrecios -- No --> ErrPrecio
+    ValPrecios -- Sí --> ValMutacion
+    
+    ValMutacion -- Sí --> ErrMutacion
+    ValMutacion -- No --> Persistir
+    
+    %% Flujo de persistencia final
+    Persistir --> AuditLog --> FinExito
+
+    %% Estilos de Nodos inspirados en la imagen
+    classDef errStyle fill:#FADBD8,stroke:#E74C3C,stroke-width:1px,color:#78281F;
+    classDef dbStyle fill:#D4E6F1,stroke:#2980B9,stroke-width:1px,color:#1B4F72;
+    classDef successStyle fill:#D5F5E3,stroke:#27AE60,stroke-width:1px,color:#145A32;
